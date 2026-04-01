@@ -1,30 +1,32 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { Upload, FileText, ImageIcon, Download, Loader2, X, Table, Layout } from 'lucide-react';
-// We will import pdfjs-dist dynamically in the effect or handler to avoid SSR issues
+import React, { useState } from 'react';
+import { Upload, FileText, ImageIcon, Download, Loader2, X, Table, Layout, ScanText } from 'lucide-react';
 
 import { convertPDFToImages, convertPDFToDocx, convertPDFToXlsx, convertPDFToPptx } from '@/lib/pdf-utils';
 import ResultSection from './ResultSection';
 
+type Format = 'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png';
+
 export default function PDFConverter() {
   const [file, setFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
-  const [format, setFormat] = useState<'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png'>('docx');
+  const [format, setFormat] = useState<Format>('docx');
+  const [useOCR, setUseOCR] = useState(false);
+  const [progressMsg, setProgressMsg] = useState('');
   const [results, setResults] = useState<string[] | Blob | null>(null);
-  const [currentFormat, setCurrentFormat] = useState<'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png' | null>(null);
+  const [currentFormat, setCurrentFormat] = useState<Format | null>(null);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setResults(null);
       setCurrentFormat(null);
+      setProgressMsg('');
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -34,6 +36,7 @@ export default function PDFConverter() {
         setFile(droppedFile);
         setResults(null);
         setCurrentFormat(null);
+        setProgressMsg('');
       }
     }
   };
@@ -43,28 +46,32 @@ export default function PDFConverter() {
     setIsConverting(true);
     setResults(null);
     setCurrentFormat(null);
-    
+    setProgressMsg('Starting conversion…');
+
     try {
       let conversionResult: string[] | Blob;
-      
+      const onProgress = (msg: string) => setProgressMsg(msg);
+
       switch (format) {
         case 'png':
         case 'jpg':
+          setProgressMsg('Rendering pages…');
           conversionResult = await convertPDFToImages(file, format);
           break;
         case 'docx':
-          conversionResult = await convertPDFToDocx(file);
+          conversionResult = await convertPDFToDocx(file, useOCR, onProgress);
           break;
         case 'xlsx':
-          conversionResult = await convertPDFToXlsx(file);
+          conversionResult = await convertPDFToXlsx(file, useOCR, onProgress);
           break;
         case 'pptx':
+          setProgressMsg('Rendering slides…');
           conversionResult = await convertPDFToPptx(file);
           break;
         default:
           throw new Error('Unsupported format');
       }
-      
+
       setResults(conversionResult);
       setCurrentFormat(format);
     } catch (error) {
@@ -72,28 +79,27 @@ export default function PDFConverter() {
       alert('Conversion failed. Please try again.');
     } finally {
       setIsConverting(false);
+      setProgressMsg('');
     }
   };
+
+  const ocrApplicable = format === 'docx' || format === 'xlsx';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {!file ? (
-        <div 
+        <div
           className="pdf-drop-zone"
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          style={{
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            cursor: 'pointer',
-          }}
+          style={{ padding: '4rem 2rem', textAlign: 'center', cursor: 'pointer' }}
           onClick={() => document.getElementById('file-upload')?.click()}
         >
-          <input 
+          <input
             id="file-upload"
-            type="file" 
-            accept=".pdf" 
-            style={{ display: 'none' }} 
+            type="file"
+            accept=".pdf"
+            style={{ display: 'none' }}
             onChange={onFileChange}
           />
           <Upload size={40} color="#6366f1" style={{ marginBottom: '1rem', opacity: 0.8 }} />
@@ -117,52 +123,82 @@ export default function PDFConverter() {
 
       {file && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Format selector */}
           <div>
             <p style={{ marginBottom: '1rem', fontWeight: 500, fontSize: '0.8125rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Output Format</p>
             <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-              <FormatButton 
-                active={format === 'docx'} 
-                onClick={() => setFormat('docx')}
-                icon={<FileText size={18} />}
-                label="DOCX"
-              />
-              <FormatButton 
-                active={format === 'xlsx'} 
-                onClick={() => setFormat('xlsx')}
-                icon={<Table size={18} />}
-                label="XLSX"
-              />
-              <FormatButton 
-                active={format === 'pptx'} 
-                onClick={() => setFormat('pptx')}
-                icon={<Layout size={18} />}
-                label="PPTX"
-              />
-              <FormatButton 
-                active={format === 'jpg'} 
-                onClick={() => setFormat('jpg')}
-                icon={<ImageIcon size={18} />}
-                label="JPG"
-              />
-              <FormatButton 
-                active={format === 'png'} 
-                onClick={() => setFormat('png')}
-                icon={<ImageIcon size={18} />}
-                label="PNG"
-              />
+              <FormatButton active={format === 'docx'} onClick={() => setFormat('docx')} icon={<FileText size={18} />} label="DOCX" />
+              <FormatButton active={format === 'xlsx'} onClick={() => setFormat('xlsx')} icon={<Table size={18} />} label="XLSX" />
+              <FormatButton active={format === 'pptx'} onClick={() => setFormat('pptx')} icon={<Layout size={18} />} label="PPTX" />
+              <FormatButton active={format === 'jpg'} onClick={() => setFormat('jpg')} icon={<ImageIcon size={18} />} label="JPG" />
+              <FormatButton active={format === 'png'} onClick={() => setFormat('png')} icon={<ImageIcon size={18} />} label="PNG" />
             </div>
           </div>
 
-          <button 
-            className="primary" 
+          {/* OCR toggle — only meaningful for DOCX and XLSX */}
+          {ocrApplicable && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.875rem 1rem',
+                borderRadius: '10px',
+                background: useOCR ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${useOCR ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <ScanText size={18} color={useOCR ? '#a5b4fc' : 'rgba(255,255,255,0.4)'} />
+                <div>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 500, color: useOCR ? '#a5b4fc' : 'rgba(255,255,255,0.6)' }}>Deep Scan (OCR)</p>
+                  <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.15rem' }}>Use for scanned documents or image‑based PDFs</p>
+                </div>
+              </div>
+              {/* Toggle switch */}
+              <button
+                onClick={() => setUseOCR(v => !v)}
+                style={{
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: useOCR ? '#6366f1' : 'rgba(255,255,255,0.15)',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  flexShrink: 0,
+                }}
+                aria-label="Toggle OCR"
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: useOCR ? '23px' : '3px',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 0.2s',
+                  }}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Convert button */}
+          <button
+            className="primary"
             onClick={convertFile}
             disabled={isConverting}
             style={{ width: '100%', fontSize: '1.1rem', height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           >
             {isConverting ? (
               <>
-                <Loader2 className="animate-spin" />
-                Converting...
+                <Loader2 className="animate-spin" size={20} />
+                <span style={{ fontSize: '0.9rem' }}>{progressMsg || 'Converting…'}</span>
               </>
             ) : (
               <>
@@ -175,19 +211,19 @@ export default function PDFConverter() {
       )}
 
       {results && currentFormat && (
-        <ResultSection 
-          results={results} 
-          format={currentFormat} 
-          fileName={file?.name || 'document.pdf'} 
+        <ResultSection
+          results={results}
+          format={currentFormat}
+          fileName={file?.name || 'document.pdf'}
         />
       )}
     </div>
   );
 }
 
-function FormatButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+function FormatButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       style={{
         display: 'flex',
