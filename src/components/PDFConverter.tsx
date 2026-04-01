@@ -10,9 +10,9 @@ import ResultSection from './ResultSection';
 export default function PDFConverter() {
   const [file, setFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
-  const [format, setFormat] = useState<'pdf' | 'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png'>('pdf');
+  const [format, setFormat] = useState<'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png'>('docx');
   const [results, setResults] = useState<string[] | Blob | null>(null);
-  const [currentFormat, setCurrentFormat] = useState<'pdf' | 'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png' | null>(null);
+  const [currentFormat, setCurrentFormat] = useState<'docx' | 'xlsx' | 'pptx' | 'jpg' | 'png' | null>(null);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -54,9 +54,6 @@ export default function PDFConverter() {
           break;
         case 'docx':
           conversionResult = await convertPDFToDocx(file);
-          break;
-        case 'pdf':
-          conversionResult = new Blob([await file.arrayBuffer()], { type: 'application/pdf' });
           break;
         case 'xlsx':
           conversionResult = await convertPDFToXlsx(file);
@@ -123,12 +120,6 @@ export default function PDFConverter() {
           <div>
             <p style={{ marginBottom: '1rem', fontWeight: 500, fontSize: '0.8125rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Output Format</p>
             <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-              <FormatButton 
-                active={format === 'pdf'} 
-                onClick={() => setFormat('pdf')}
-                icon={<FileText size={18} />}
-                label="PDF"
-              />
               <FormatButton 
                 active={format === 'docx'} 
                 onClick={() => setFormat('docx')}

@@ -46,7 +46,7 @@ export default function NewLandingPage() {
 
             {/* Format pills */}
             <div className="lp-formats">
-              {['PDF', 'DOCX', 'XLSX', 'PPTX', 'JPG', 'PNG'].map(f => (
+              {['DOCX', 'XLSX', 'PPTX', 'JPG', 'PNG'].map(f => (
                 <span key={f} className="lp-pill">{f}</span>
               ))}
             </div>

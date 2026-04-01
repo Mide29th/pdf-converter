@@ -12,6 +12,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "canvas": "latest",
     "docx": "latest",
+    "jszip": "^3.10.1",
     "lucide-react": "latest",
     "next": "latest",
     "pdf-lib": "latest",
