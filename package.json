@@ -1,0 +1,35 @@
+{
+  "name": "pdf-converter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "canvas": "latest",
+    "docx": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "pdf-lib": "latest",
+    "pdfjs-dist": "latest",
+    "pptxgenjs": "^4.0.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.4.27",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "latest"
+  }
+}
